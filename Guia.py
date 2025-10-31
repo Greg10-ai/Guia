@@ -78,7 +78,7 @@ if not os.path.exists("uploads"):
 def index():
     return redirect(url_for("login"))
 
-@app.route("/login", methods=["GET", "POST"])
+@app.route("/index", methods=["GET", "POST"])
 def login():
     if 'logged_in' in session:
         return redirect(url_for('site'))
@@ -98,7 +98,7 @@ def login():
         else:
             flash("❌ Usuário ou senha incorretos. Tente novamente.", "danger")
     
-    return render_template("login.html")
+    return render_template("index.html")
 
 @app.route("/logout")
 @login_required
