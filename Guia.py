@@ -126,15 +126,33 @@ def load_product_base(file_path):
     df = pd.read_excel(file_path) if file_path.endswith(".xlsx") else pd.read_csv(file_path)
     if not {"Codigo", "Descricao", "Origem"}.issubset(df.columns):
         raise ValueError("Planilha deve conter as colunas Codigo, Descricao e Origem")
-    PRODUCT_DB = {
-        str(row["Codigo"]).strip(): {
+    
+    PRODUCT_DB = {}
+    for _, row in df.iterrows():
+        # Remove zeros iniciais do código
+        codigo_original = str(row["Codigo"]).strip()
+        codigo_limpo = codigo_original.lstrip('0')  # Remove todos os zeros iniciais
+        
+        # Se após remover zeros ficar vazio, mantém o original
+        if not codigo_limpo:
+            codigo_limpo = codigo_original
+            
+        PRODUCT_DB[codigo_limpo] = {
             "descricao": str(row["Descricao"]).strip(),
             "origem": str(row["Origem"]).strip().lower()
         }
-        for _, row in df.iterrows()
-    }
+        
+        # Também armazena o código original para busca alternativa
+        if codigo_original != codigo_limpo:
+            PRODUCT_DB[codigo_original] = PRODUCT_DB[codigo_limpo]
+        
+        print(f"✅ Código adicionado: '{codigo_original}' -> '{codigo_limpo}'")
+    
     with open(PRODUCT_BASE_FILE, "w", encoding="utf-8") as f:
         json.dump(PRODUCT_DB, f, indent=2, ensure_ascii=False)
+    
+    print(f"📊 Base carregada com {len(PRODUCT_DB)} produtos")
+    return True
 
 def calc_difal(valor_total_produtos, valor_frete, valor_seguro, valor_outros, valor_desconto, origem, aliquota_interna_pct):
     """
@@ -307,7 +325,12 @@ def parse_extracted_text(text):
                 preco_unit_c_ipi_float = float(preco_unitario_c_ipi)
                 icms_pct_float = float(icms_pct)
                 
-                print(f"✅ Extraído - Código: {codigo}")
+                # REMOVE ZEROS INICIAIS DO CÓDIGO
+                codigo_limpo = codigo.lstrip('0')
+                if not codigo_limpo:  # Se ficou vazio após remover zeros, mantém o original
+                    codigo_limpo = codigo
+                
+                print(f"✅ Extraído - Código original: {codigo} -> Código limpo: {codigo_limpo}")
                 print(f"   Qtd: {qtd_float}")
                 print(f"   Preço unit. (sem IPI): {preco_unit_float}")
                 print(f"   Preço unit. c/ IPI: {preco_unit_c_ipi_float}")
@@ -316,13 +339,14 @@ def parse_extracted_text(text):
                 if qtd_float > 0 and preco_unit_float > 0 and preco_unit_c_ipi_float > 0:
                     
                     codigo_encontrado = None
-                    for codigo_variante in [codigo, codigo[:6], codigo[-6:]]:
+                    # Busca usando o código sem zeros
+                    for codigo_variante in [codigo_limpo, codigo_limpo[:6], codigo_limpo[-6:]]:
                         if codigo_variante in PRODUCT_DB:
                             codigo_encontrado = codigo_variante
                             break
                     
                     items.append({
-                        'codigo': codigo_encontrado or codigo,
+                        'codigo': codigo_encontrado or codigo_limpo,
                         'qtd': str(qtd_float),
                         'valor_unit': round(preco_unit_float, 2),
                         'valor_unit_c_ipi': round(preco_unit_c_ipi_float, 2),
@@ -343,6 +367,11 @@ def parse_extracted_text(text):
                 
             codigo = codigos[0]
             
+            # REMOVE ZEROS INICIAIS DO CÓDIGO
+            codigo_limpo = codigo.lstrip('0')
+            if not codigo_limpo:
+                codigo_limpo = codigo
+            
             valores = re.findall(r'(\d+[,.]\d+)', line)
             if len(valores) >= 5:
                 try:
@@ -359,13 +388,13 @@ def parse_extracted_text(text):
                     
                     if preco_com_ipi and qtd > 0:
                         items.append({
-                            'codigo': codigo,
+                            'codigo': codigo_limpo,
                             'qtd': str(qtd),
                             'valor_unit': round(preco_sem_ipi, 2),
                             'valor_unit_c_ipi': round(preco_com_ipi, 2),
                             'icms_pct': icms_pct
                         })
-                        print(f"✅ Alternativo - Código: {codigo}, Preço c/IPI: {preco_com_ipi}, %ICMS: {icms_pct}")
+                        print(f"✅ Alternativo - Código: {codigo_limpo}, Preço c/IPI: {preco_com_ipi}, %ICMS: {icms_pct}")
                         
                 except (ValueError, IndexError) as e:
                     print(f"❌ Erro no método alternativo: {e}")
@@ -455,7 +484,12 @@ def extract_table_with_pdfplumber(file_path):
                                 break
                         
                         if codigo:
-                            print(f"🔍 Linha {row_idx}: Código {codigo}")
+                            # REMOVE ZEROS INICIAIS DO CÓDIGO
+                            codigo_limpo = codigo.lstrip('0')
+                            if not codigo_limpo:
+                                codigo_limpo = codigo
+                            
+                            print(f"🔍 Linha {row_idx}: Código original: {codigo} -> Código limpo: {codigo_limpo}")
                             print(f"   Valores: {clean_row}")
                             
                             valores = []
@@ -478,13 +512,13 @@ def extract_table_with_pdfplumber(file_path):
                                     
                                     if preco_com_ipi and qtd > 0:
                                         items.append({
-                                            'codigo': codigo,
+                                            'codigo': codigo_limpo,
                                             'qtd': str(qtd),
                                             'valor_unit': round(preco_sem_ipi, 2),
                                             'valor_unit_c_ipi': round(preco_com_ipi, 2),
                                             'icms_pct': icms_pct
                                         })
-                                        print(f"✅ Adicionado: {codigo}, Preço c/IPI: {preco_com_ipi}, %ICMS: {icms_pct}")
+                                        print(f"✅ Adicionado: {codigo_limpo}, Preço c/IPI: {preco_com_ipi}, %ICMS: {icms_pct}")
                                         
                                 except ValueError as e:
                                     print(f"❌ Erro nos valores: {e}")
@@ -636,7 +670,16 @@ def compute():
     for i in range(len(codigos)):
         codigo = codigos[i]
         qtd = safe_decimal_convert(quantidades[i])
+        
+        # BUSCA O PRODUTO NA BASE (COM REMOÇÃO DE ZEROS INICIAIS)
         produto = PRODUCT_DB.get(codigo)
+
+        # SE NÃO ENCONTROU, TENTA REMOVER ZEROS INICIAIS
+        if not produto:
+            codigo_sem_zeros = codigo.lstrip('0')
+            produto = PRODUCT_DB.get(codigo_sem_zeros)
+            if produto:
+                codigo = codigo_sem_zeros  # Atualiza o código para a versão sem zeros
 
         if not produto:
             flash(f"Produto {codigo} não encontrado na base!", "danger")
