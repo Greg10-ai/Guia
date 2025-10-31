@@ -237,236 +237,234 @@ def parse_extracted_text(text):
     in_general_info = False
     
     for i, line in enumerate(lines):
-        # Seção de ITENS DO DOCUMENTO
-        if 'ITENS DO DOCUMENTO' in line:
+        # Seção de ITENS DO DOCUMENTO - MAIS FLEXÍVEL
+        if 'ITENS DO DOCUMENTO' in line or 'ITENS DA NOTA' in line or 'CÓDIGO' in line and 'DESCRIÇÃO' in line:
             in_items_section = True
             in_general_info = False
             print("✅ Entrou na seção de itens")
             continue
         
         # Seção de INFORMAÇÕES GERAIS
-        if 'INFORMAÇÕES GERAIS' in line:
+        if 'INFORMAÇÕES GERAIS' in line or 'DADOS DO DOCUMENTO' in line:
             in_items_section = False
             in_general_info = True
             print("✅ Entrou na seção de informações gerais")
             continue
             
-        if 'TOTAIS' in line or 'VALOR TOTAL' in line:
+        if 'TOTAIS' in line or 'VALOR TOTAL' in line or 'TOTAL DA NOTA' in line:
             in_items_section = False
             in_general_info = False
             print("✅ Saiu das seções de dados")
-            break
+            # Não break aqui para capturar mais linhas
         
         if in_items_section:
-            # Captura todas as linhas da seção de itens (mais flexível)
-            if line.strip() and not line.startswith('#') and not line.startswith('|--'):
+            # Captura TODAS as linhas que possuem números (mais agressivo)
+            if line.strip() and any(char.isdigit() for char in line):
                 items_section_lines.append(line.strip())
                 
         # Extrair valor do frete e desconto
         if in_general_info:
-            if 'Tipo de frete:' in line or 'frete' in line.lower():
+            if 'frete' in line.lower() and not valor_frete:
                 print(f"🔍 Linha com frete: {line}")
                 # Procura por valores monetários na linha
-                valores_monetarios = re.findall(r'R\$\s*([\d.,]+)|([\d.,]+)\s*(?:R\$)?', line)
-                for match in valores_monetarios:
-                    for valor in match:
-                        if valor:
-                            try:
-                                valor_limpo = valor.replace('.', '').replace(',', '.')
-                                valor_frete = float(valor_limpo)
+                valores_monetarios = re.findall(r'[\d.,]+', line)
+                for valor in valores_monetarios:
+                    try:
+                        valor_limpo = valor.replace('.', '').replace(',', '.').strip()
+                        if len(valor_limpo) > 0:
+                            valor_temp = float(valor_limpo)
+                            if 1 <= valor_temp <= 10000:  # Valores razoáveis para frete
+                                valor_frete = valor_temp
                                 print(f"💰 Valor do frete encontrado: R$ {valor_frete}")
                                 break
-                            except ValueError:
-                                continue
-                    if valor_frete > 0:
-                        break
+                    except ValueError:
+                        continue
             
-            # Procura por desconto financeiro nos totais
-            if 'DESCONTO FINANCEIRO' in line:
+            # Procura por desconto financeiro
+            if 'desconto' in line.lower() and not valor_desconto:
                 print(f"🔍 Linha com desconto: {line}")
                 valores_monetarios = re.findall(r'[\d.,]+', line)
                 for valor in valores_monetarios:
                     try:
-                        valor_limpo = valor.replace('.', '').replace(',', '.')
-                        valor_desconto = float(valor_limpo)
-                        print(f"💰 Valor do desconto encontrado: R$ {valor_desconto}")
-                        break
+                        valor_limpo = valor.replace('.', '').replace(',', '.').strip()
+                        if len(valor_limpo) > 0:
+                            valor_temp = float(valor_limpo)
+                            if 1 <= valor_temp <= 10000:  # Valores razoáveis para desconto
+                                valor_desconto = valor_temp
+                                print(f"💰 Valor do desconto encontrado: R$ {valor_desconto}")
+                                break
                     except ValueError:
                         continue
     
     print(f"Encontradas {len(items_section_lines)} linhas na seção de itens")
     
-    # MÉTODO PRINCIPAL MELHORADO - MAIS FLEXÍVEL
+    # MÉTODO SUPER AGRESSIVO - CAPTURA TUDO QUE PARECE SER PRODUTO
+    produtos_detectados = set()  # Para evitar duplicatas
+    
     for line in items_section_lines:
-        print(f"🔍 Processando linha: {line}")
+        print(f"🔍 Analisando linha: {line}")
         
-        # REMOVE ZEROS INICIAIS DO CÓDIGO ANTES DE PROCESSAR
+        # PROCURA POR CÓDIGOS DE PRODUTO (8+ dígitos)
         codigos_encontrados = re.findall(r'\b(\d{8,})\b', line)
-        if not codigos_encontrados:
-            continue
-            
-        codigo_original = codigos_encontrados[0]
-        codigo = codigo_original.lstrip('0')
-        if not codigo:  # Se ficou vazio após remover zeros, mantém o original
-            codigo = codigo_original
         
-        # PROCURA TODOS OS VALORES NUMÉRICOS NA LINHA
-        valores = re.findall(r'(\d+[,.]\d+)', line)
-        if len(valores) < 3:
-            continue
+        for codigo_original in codigos_encontrados:
+            # Remove zeros iniciais
+            codigo = codigo_original.lstrip('0')
+            if not codigo:
+                codigo = codigo_original
             
-        try:
-            # Tenta diferentes combinações de valores
-            combinacoes_validas = []
+            # Evita processar o mesmo código múltiplas vezes
+            if codigo in produtos_detectados:
+                continue
+                
+            produtos_detectados.add(codigo)
             
-            # Combinação 1: qtd, preco_sem_ipi, icms, preco_com_ipi
-            if len(valores) >= 4:
-                qtd = float(valores[0].replace(',', '.'))
-                preco_sem_ipi = float(valores[1].replace(',', '.'))
-                icms_pct = float(valores[2].replace(',', '.'))
-                preco_com_ipi = None
-                
-                # Procura preço com IPI (primeiro valor maior que preco_sem_ipi)
-                for i in range(3, len(valores)):
-                    valor_teste = float(valores[i].replace(',', '.'))
-                    if valor_teste > preco_sem_ipi:
-                        preco_com_ipi = valor_teste
-                        break
-                
-                if preco_com_ipi and qtd > 0 and preco_sem_ipi > 0:
-                    combinacoes_validas.append((qtd, preco_sem_ipi, icms_pct, preco_com_ipi))
+            print(f"🎯 Encontrado código: {codigo} (original: {codigo_original})")
             
-            # Combinação 2: qtd, preco_sem_ipi, preco_com_ipi (sem ICMS explícito)
-            if len(valores) >= 3:
-                qtd = float(valores[0].replace(',', '.'))
-                preco_sem_ipi = float(valores[1].replace(',', '.'))
-                preco_com_ipi_candidato = float(valores[2].replace(',', '.'))
-                
-                if preco_com_ipi_candidato > preco_sem_ipi and qtd > 0 and preco_sem_ipi > 0:
-                    combinacoes_validas.append((qtd, preco_sem_ipi, 0.0, preco_com_ipi_candidato))
+            # PROCURA TODOS OS NÚMEROS NA LINHA (incluindo decimais)
+            todos_numeros = re.findall(r'\b\d+[.,]?\d*\b', line)
+            valores_numericos = []
             
-            # Combinação 3: valores em posições diferentes
-            if len(valores) >= 4:
-                # Tenta diferentes índices para quantidade
-                for idx_qtd in range(min(3, len(valores))):
-                    try:
-                        qtd = float(valores[idx_qtd].replace(',', '.'))
-                        if qtd > 0 and qtd < 1000:  # Quantidade razoável
-                            # Procura preços nos demais índices
-                            for idx_preco in range(len(valores)):
-                                if idx_preco != idx_qtd:
-                                    preco_candidato = float(valores[idx_preco].replace(',', '.'))
-                                    if preco_candidato > 1 and preco_candidato < 10000:  # Preço razoável
-                                        # Assume que pode ser preço sem IPI
-                                        preco_sem_ipi = preco_candidato
-                                        # Procura preço maior para ser com IPI
-                                        preco_com_ipi = None
-                                        for idx_ipi in range(len(valores)):
-                                            if idx_ipi != idx_qtd and idx_ipi != idx_preco:
-                                                preco_ipi_candidato = float(valores[idx_ipi].replace(',', '.'))
-                                                if preco_ipi_candidato > preco_sem_ipi:
-                                                    preco_com_ipi = preco_ipi_candidato
-                                                    break
-                                        
-                                        if preco_com_ipi:
-                                            combinacoes_validas.append((qtd, preco_sem_ipi, 0.0, preco_com_ipi))
-                    except:
-                        continue
+            for num in todos_numeros:
+                try:
+                    # Converte para float, tratando tanto . quanto , como separador decimal
+                    if ',' in num and '.' in num:
+                        # Caso tenha ambos, assume que , é decimal (formato brasileiro)
+                        valor = float(num.replace('.', '').replace(',', '.'))
+                    elif ',' in num:
+                        valor = float(num.replace(',', '.'))
+                    else:
+                        valor = float(num)
+                    
+                    # Filtra valores razoáveis
+                    if 0.01 <= valor <= 100000:
+                        valores_numericos.append(valor)
+                except ValueError:
+                    continue
             
-            # SELECIONA A MELHOR COMBINAÇÃO
-            if combinacoes_validas:
-                # Prefere combinações com ICMS explícito
-                combinacao_com_icms = [c for c in combinacoes_validas if c[2] > 0]
-                if combinacao_com_icms:
-                    qtd, preco_sem_ipi, icms_pct, preco_com_ipi = combinacao_com_icms[0]
-                else:
-                    qtd, preco_sem_ipi, icms_pct, preco_com_ipi = combinacoes_validas[0]
+            print(f"   Valores numéricos encontrados: {valores_numericos}")
+            
+            if len(valores_numericos) >= 2:
+                # TENTA DIFERENTES COMBINAÇÕES
+                combinacoes_tentadas = []
                 
-                print(f"✅ Extraído - Código: {codigo} (original: {codigo_original})")
-                print(f"   Qtd: {qtd}")
-                print(f"   Preço unit. (sem IPI): {preco_sem_ipi}")
-                print(f"   Preço unit. c/ IPI: {preco_com_ipi}")
-                print(f"   %ICMS: {icms_pct}%")
+                # Combinação 1: assume primeiro número como quantidade
+                if len(valores_numericos) >= 2:
+                    qtd = valores_numericos[0]
+                    preco_sem_ipi = valores_numericos[1]
+                    preco_com_ipi = None
+                    icms_pct = 0.0
+                    
+                    # Procura preço com IPI (primeiro valor maior que preco_sem_ipi)
+                    for i in range(2, len(valores_numericos)):
+                        if valores_numericos[i] > preco_sem_ipi:
+                            preco_com_ipi = valores_numericos[i]
+                            break
+                    
+                    if preco_com_ipi is None and len(valores_numericos) >= 3:
+                        preco_com_ipi = valores_numericos[2]
+                    
+                    if preco_com_ipi and qtd > 0 and preco_sem_ipi > 0:
+                        combinacoes_tentadas.append((qtd, preco_sem_ipi, icms_pct, preco_com_ipi))
                 
-                # Verifica se já existe este produto
-                ja_existe = any(item['codigo'] == codigo for item in items)
-                if not ja_existe:
+                # Combinação 2: procura por padrão de quantidade (números "redondos")
+                for i, num in enumerate(valores_numericos):
+                    if num == int(num) and 1 <= num <= 1000:  # Número inteiro entre 1 e 1000
+                        qtd = num
+                        # Procura preços nos números seguintes
+                        for j in range(i+1, len(valores_numericos)):
+                            if valores_numericos[j] > 1:  # Possível preço
+                                preco_sem_ipi = valores_numericos[j]
+                                # Procura preço maior para IPI
+                                preco_com_ipi = None
+                                for k in range(j+1, len(valores_numericos)):
+                                    if valores_numericos[k] > preco_sem_ipi:
+                                        preco_com_ipi = valores_numericos[k]
+                                        break
+                                
+                                if preco_com_ipi is None and j+1 < len(valores_numericos):
+                                    preco_com_ipi = valores_numericos[j+1] if valores_numericos[j+1] > preco_sem_ipi else preco_sem_ipi * 1.1
+                                
+                                if preco_com_ipi:
+                                    combinacoes_tentadas.append((qtd, preco_sem_ipi, 0.0, preco_com_ipi))
+                                break
+                
+                # SELECIONA A MELHOR COMBINAÇÃO
+                if combinacoes_tentadas:
+                    # Prefere combinações com quantidades inteiras
+                    combinacoes_inteiras = [c for c in combinacoes_tentadas if c[0] == int(c[0])]
+                    if combinacoes_inteiras:
+                        qtd, preco_sem_ipi, icms_pct, preco_com_ipi = combinacoes_inteiras[0]
+                    else:
+                        qtd, preco_sem_ipi, icms_pct, preco_com_ipi = combinacoes_tentadas[0]
+                    
+                    # Garante que preço com IPI seja maior ou igual ao sem IPI
+                    if preco_com_ipi < preco_sem_ipi:
+                        preco_com_ipi = preco_sem_ipi * 1.1  # Aplica 10% se necessário
+                    
+                    print(f"✅ Extraído - Código: {codigo}")
+                    print(f"   Qtd: {qtd}")
+                    print(f"   Preço unit. (sem IPI): R$ {preco_sem_ipi:.2f}")
+                    print(f"   Preço unit. c/ IPI: R$ {preco_com_ipi:.2f}")
+                    print(f"   %ICMS: {icms_pct}%")
+                    
+                    # Busca na base de produtos
                     codigo_encontrado = None
-                    for codigo_variante in [codigo, codigo[:6], codigo[-6:]]:
+                    for codigo_variante in [codigo, codigo[:6], codigo[-6:], codigo_original]:
                         if codigo_variante in PRODUCT_DB:
                             codigo_encontrado = codigo_variante
                             break
                     
                     items.append({
                         'codigo': codigo_encontrado or codigo,
-                        'qtd': str(qtd),
+                        'qtd': str(round(qtd, 2)),
                         'valor_unit': round(preco_sem_ipi, 2),
                         'valor_unit_c_ipi': round(preco_com_ipi, 2),
                         'icms_pct': icms_pct
                     })
                     print("   ✅ Produto adicionado com sucesso!")
-                else:
-                    print("   ⚠️ Produto já existe na lista")
-                        
-        except (ValueError, IndexError) as e:
-            print(f"❌ Erro ao processar linha: {e}")
-            continue
     
-    # MÉTODO DE FALLBACK - PARA LINHAS MAIS DIFÍCEIS
-    if len(items) < len(items_section_lines) * 0.5:  # Se capturou menos da metade
-        print("🔄 Ativando método de fallback...")
+    # MÉTODO ALTERNATIVO: PROCURA POR PADRÕES DE TABELA MESMO SEM CÓDIGO CLARO
+    if len(items) < 3:  # Se capturou poucos produtos
+        print("🔄 Ativando método alternativo de busca...")
+        
         for line in items_section_lines:
-            # Procura por padrões de código numérico
-            codigos = re.findall(r'\b(\d{8,})\b', line)
-            if not codigos:
-                continue
-                
-            codigo_original = codigos[0]
-            codigo = codigo_original.lstrip('0')
-            if not codigo:
-                codigo = codigo_original
+            # Procura por sequências de números que parecem ser produtos
+            sequencias_numeros = re.findall(r'(\d+)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)', line)
             
-            # Verifica se já existe
-            ja_existe = any(item['codigo'] == codigo for item in items)
-            if ja_existe:
-                continue
-            
-            # Procura todos os números na linha
-            numeros = re.findall(r'\b\d+[.,]?\d*\b', line)
-            valores_validos = []
-            
-            for num in numeros:
+            for seq in sequencias_numeros:
                 try:
-                    if ',' in num or '.' in num:
-                        valor = float(num.replace(',', '.'))
-                        if 0.1 <= valor <= 10000:  # Valores razoáveis
-                            valores_validos.append(valor)
+                    # Tenta interpretar como: código, qtd, preco1, preco2
+                    codigo_candidato = seq[0]
+                    if len(codigo_candidato) >= 6:  # Código razoável
+                        qtd = float(seq[1].replace(',', '.'))
+                        preco1 = float(seq[2].replace(',', '.'))
+                        preco2 = float(seq[3].replace(',', '.'))
+                        
+                        preco_sem_ipi = min(preco1, preco2)
+                        preco_com_ipi = max(preco1, preco2)
+                        
+                        if qtd > 0 and preco_sem_ipi > 0 and preco_com_ipi > preco_sem_ipi:
+                            # Remove zeros do código
+                            codigo = codigo_candidato.lstrip('0')
+                            if not codigo:
+                                codigo = codigo_candidato
+                            
+                            if codigo not in produtos_detectados:
+                                produtos_detectados.add(codigo)
+                                
+                                items.append({
+                                    'codigo': codigo,
+                                    'qtd': str(round(qtd, 2)),
+                                    'valor_unit': round(preco_sem_ipi, 2),
+                                    'valor_unit_c_ipi': round(preco_com_ipi, 2),
+                                    'icms_pct': 0.0
+                                })
+                                print(f"✅ Alternativo - Código: {codigo}, Qtd: {qtd}, Preços: {preco_sem_ipi:.2f}/{preco_com_ipi:.2f}")
                 except:
                     continue
-            
-            if len(valores_validos) >= 2:
-                # Assume o menor valor como quantidade (se for inteiro)
-                qtd_candidatos = [v for v in valores_validos if v == int(v) and 1 <= v <= 1000]
-                if qtd_candidatos:
-                    qtd = qtd_candidatos[0]
-                    # Remove a quantidade dos valores
-                    valores_sem_qtd = [v for v in valores_validos if v != qtd]
-                    
-                    if len(valores_sem_qtd) >= 2:
-                        preco_sem_ipi = min(valores_sem_qtd)
-                        preco_com_ipi = max(valores_sem_qtd)
-                        
-                        if preco_com_ipi > preco_sem_ipi:
-                            items.append({
-                                'codigo': codigo,
-                                'qtd': str(int(qtd)),
-                                'valor_unit': round(preco_sem_ipi, 2),
-                                'valor_unit_c_ipi': round(preco_com_ipi, 2),
-                                'icms_pct': 0.0
-                            })
-                            print(f"✅ Fallback - Código: {codigo}, Qtd: {qtd}, Preços: {preco_sem_ipi}/{preco_com_ipi}")
     
-    print(f"=== RESULTADO: {len(items)} itens extraídos ===")
+    print(f"=== RESULTADO FINAL: {len(items)} itens extraídos ===")
     for i, item in enumerate(items):
         print(f"  {i+1}. Código: {item['codigo']}, Qtd: {item['qtd']}, Valor: R$ {item['valor_unit']}")
     
