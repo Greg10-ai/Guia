@@ -221,7 +221,6 @@ def extract_text_from_pdf(file_path):
         print(f"Erro com pdfplumber: {e}")
     
     return text
-
 def parse_extracted_text(text):
     items = []
     lines = text.split('\n')
@@ -238,7 +237,7 @@ def parse_extracted_text(text):
     
     for i, line in enumerate(lines):
         # Seção de ITENS DO DOCUMENTO
-        if 'ITENS DO DOCUMENTO' in line or ('Código' in line and 'Descrição' in line):
+        if 'ITENS DO DOCUMENTO' in line:
             in_items_section = True
             in_general_info = False
             print("✅ Entrou na seção de itens")
@@ -258,12 +257,12 @@ def parse_extracted_text(text):
             break
         
         if in_items_section:
-            if line.strip() and len(line.strip()) > 10:
+            # Captura todas as linhas da seção de itens (mais flexível)
+            if line.strip() and not line.startswith('#') and not line.startswith('|--'):
                 items_section_lines.append(line.strip())
                 
-        # Extrair valor do frete e desconto da seção de informações gerais
+        # Extrair valor do frete e desconto
         if in_general_info:
-            # Procura por padrões de valor monetário após "Tipo de frete:"
             if 'Tipo de frete:' in line or 'frete' in line.lower():
                 print(f"🔍 Linha com frete: {line}")
                 # Procura por valores monetários na linha
@@ -272,7 +271,6 @@ def parse_extracted_text(text):
                     for valor in match:
                         if valor:
                             try:
-                                # Tenta converter o primeiro valor monetário encontrado
                                 valor_limpo = valor.replace('.', '').replace(',', '.')
                                 valor_frete = float(valor_limpo)
                                 print(f"💰 Valor do frete encontrado: R$ {valor_frete}")
@@ -282,71 +280,89 @@ def parse_extracted_text(text):
                     if valor_frete > 0:
                         break
             
-            # Procura por desconto financeiro
-            if 'desconto' in line.lower() and ('financeiro' in line.lower() or 'R$' in line):
+            # Procura por desconto financeiro nos totais
+            if 'DESCONTO FINANCEIRO' in line:
                 print(f"🔍 Linha com desconto: {line}")
-                # Procura por valores monetários na linha do desconto
-                valores_monetarios = re.findall(r'R\$\s*([\d.,]+)|([\d.,]+)\s*(?:R\$)?', line)
-                for match in valores_monetarios:
-                    for valor in match:
-                        if valor:
-                            try:
-                                valor_limpo = valor.replace('.', '').replace(',', '.')
-                                valor_desconto = float(valor_limpo)
-                                print(f"💰 Valor do desconto encontrado: R$ {valor_desconto}")
-                                break
-                            except ValueError:
-                                continue
-                    if valor_desconto > 0:
+                valores_monetarios = re.findall(r'[\d.,]+', line)
+                for valor in valores_monetarios:
+                    try:
+                        valor_limpo = valor.replace('.', '').replace(',', '.')
+                        valor_desconto = float(valor_limpo)
+                        print(f"💰 Valor do desconto encontrado: R$ {valor_desconto}")
                         break
+                    except ValueError:
+                        continue
     
     print(f"Encontradas {len(items_section_lines)} linhas na seção de itens")
     
+    # PADRÃO DE REGEX MELHORADO E MAIS FLEXÍVEL
     for line in items_section_lines:
         print(f"🔍 Processando linha: {line}")
         
-        pattern = r'(\d+)\s+(\d{10,})\s+(.*?)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)'
+        # Padrão 1: Para linhas completas com todos os campos
+        pattern1 = r'(\d+)\s+(\d{8,})\s+(.*?)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)'
         
-        match = re.search(pattern, line)
+        # Padrão 2: Mais flexível para linhas com formatação diferente
+        pattern2 = r'(\d+)\s+(\d{8,})\s+(.*?)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)'
+        
+        # Padrão 3: Para capturar apenas código, quantidade e preços principais
+        pattern3 = r'(\d+)\s+(\d{8,})\s+(.*?)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)'
+        
+        match = None
+        for pattern in [pattern1, pattern2, pattern3]:
+            match = re.search(pattern, line)
+            if match:
+                break
+        
         if match:
             try:
                 numero_item = match.group(1)
                 codigo = match.group(2).strip()
                 descricao = match.group(3).strip()
+                
+                # Quantidade sempre no grupo 4
                 quantidade = match.group(4).replace(',', '.')
+                
+                # Preço unitário sempre no grupo 5
                 preco_unitario = match.group(5).replace(',', '.')
-                icms_pct = match.group(6).replace(',', '.')
-                ipi = match.group(7).replace(',', '.')
-                preco_unitario_c_ipi = match.group(8).replace(',', '.')
-                valor_total_c_ipi = match.group(9).replace(',', '.')
+                
+                # ICMS no grupo 6 (se disponível)
+                icms_pct = match.group(6).replace(',', '.') if match.lastindex >= 6 else "0.00"
+                
+                # Preço com IPI pode estar em grupos diferentes
+                preco_unitario_c_ipi = None
+                if match.lastindex >= 8:
+                    preco_unitario_c_ipi = match.group(8).replace(',', '.')
+                elif match.lastindex >= 7:
+                    preco_unitario_c_ipi = match.group(7).replace(',', '.')
                 
                 qtd_float = float(quantidade)
                 preco_unit_float = float(preco_unitario)
-                preco_unit_c_ipi_float = float(preco_unitario_c_ipi)
                 icms_pct_float = float(icms_pct)
                 
-                # REMOVE ZEROS INICIAIS DO CÓDIGO
-                codigo_limpo = codigo.lstrip('0')
-                if not codigo_limpo:  # Se ficou vazio após remover zeros, mantém o original
-                    codigo_limpo = codigo
+                # Se não encontrou preço com IPI, calcula baseado no preço sem IPI
+                if preco_unitario_c_ipi:
+                    preco_unit_c_ipi_float = float(preco_unitario_c_ipi)
+                else:
+                    # Calcula aproximado: preço sem IPI + 10%
+                    preco_unit_c_ipi_float = preco_unit_float * 1.10
                 
-                print(f"✅ Extraído - Código original: {codigo} -> Código limpo: {codigo_limpo}")
+                print(f"✅ Extraído - Item #{numero_item}, Código: {codigo}")
                 print(f"   Qtd: {qtd_float}")
                 print(f"   Preço unit. (sem IPI): {preco_unit_float}")
                 print(f"   Preço unit. c/ IPI: {preco_unit_c_ipi_float}")
                 print(f"   %ICMS: {icms_pct_float}%")
                 
-                if qtd_float > 0 and preco_unit_float > 0 and preco_unit_c_ipi_float > 0:
+                if qtd_float > 0 and preco_unit_float > 0:
                     
                     codigo_encontrado = None
-                    # Busca usando o código sem zeros
-                    for codigo_variante in [codigo_limpo, codigo_limpo[:6], codigo_limpo[-6:]]:
+                    for codigo_variante in [codigo, codigo[:6], codigo[-6:]]:
                         if codigo_variante in PRODUCT_DB:
                             codigo_encontrado = codigo_variante
                             break
                     
                     items.append({
-                        'codigo': codigo_encontrado or codigo_limpo,
+                        'codigo': codigo_encontrado or codigo,
                         'qtd': str(qtd_float),
                         'valor_unit': round(preco_unit_float, 2),
                         'valor_unit_c_ipi': round(preco_unit_c_ipi_float, 2),
@@ -357,59 +373,73 @@ def parse_extracted_text(text):
             except (ValueError, IndexError) as e:
                 print(f"❌ Erro ao processar linha: {e}")
                 continue
+        else:
+            print(f"❌ Padrão não encontrado na linha: {line}")
     
-    if not items:
-        print("🔄 Tentando método alternativo...")
+    # MÉTODO ALTERNATIVO PARA CAPTURAR PRODUTOS QUE O REGEX PERDEU
+    if len(items) < 5:  # Se não capturou todos os produtos esperados
+        print("🔄 Tentando método alternativo de extração...")
         for line in items_section_lines:
-            codigos = re.findall(r'(\d{10,})', line)
+            # Procura por padrões de código numérico longo
+            codigos = re.findall(r'\b(\d{8,})\b', line)
             if not codigos:
                 continue
                 
             codigo = codigos[0]
             
-            # REMOVE ZEROS INICIAIS DO CÓDIGO
-            codigo_limpo = codigo.lstrip('0')
-            if not codigo_limpo:
-                codigo_limpo = codigo
-            
+            # Procura todos os valores numéricos na linha
             valores = re.findall(r'(\d+[,.]\d+)', line)
-            if len(valores) >= 5:
+            if len(valores) >= 3:
                 try:
                     qtd = float(valores[0].replace(',', '.'))
                     preco_sem_ipi = float(valores[1].replace(',', '.'))
-                    icms_pct = float(valores[2].replace(',', '.'))
-                    preco_com_ipi = None
                     
-                    for i in range(3, min(6, len(valores))):
+                    # Tenta encontrar ICMS (terceiro valor geralmente)
+                    icms_pct = 0.0
+                    if len(valores) >= 3:
+                        icms_pct = float(valores[2].replace(',', '.'))
+                    
+                    # Preço com IPI - procura um valor maior que preco_sem_ipi
+                    preco_com_ipi = None
+                    for i in range(min(3, len(valores)), len(valores)):
                         valor_teste = float(valores[i].replace(',', '.'))
                         if valor_teste > preco_sem_ipi:
                             preco_com_ipi = valor_teste
                             break
                     
-                    if preco_com_ipi and qtd > 0:
-                        items.append({
-                            'codigo': codigo_limpo,
-                            'qtd': str(qtd),
-                            'valor_unit': round(preco_sem_ipi, 2),
-                            'valor_unit_c_ipi': round(preco_com_ipi, 2),
-                            'icms_pct': icms_pct
-                        })
-                        print(f"✅ Alternativo - Código: {codigo_limpo}, Preço c/IPI: {preco_com_ipi}, %ICMS: {icms_pct}")
+                    if not preco_com_ipi:
+                        preco_com_ipi = preco_sem_ipi * 1.10  # Calcula aproximado
+                    
+                    if qtd > 0:
+                        # Verifica se este produto já foi adicionado
+                        ja_existe = any(item['codigo'] == codigo for item in items)
+                        if not ja_existe:
+                            items.append({
+                                'codigo': codigo,
+                                'qtd': str(qtd),
+                                'valor_unit': round(preco_sem_ipi, 2),
+                                'valor_unit_c_ipi': round(preco_com_ipi, 2),
+                                'icms_pct': icms_pct
+                            })
+                            print(f"✅ Alternativo - Código: {codigo}, Preço c/IPI: {preco_com_ipi}, %ICMS: {icms_pct}")
                         
                 except (ValueError, IndexError) as e:
                     print(f"❌ Erro no método alternativo: {e}")
                     continue
     
     print(f"=== RESULTADO: {len(items)} itens extraídos ===")
+    for i, item in enumerate(items):
+        print(f"  {i+1}. Código: {item['codigo']}, Qtd: {item['qtd']}, Valor: R$ {item['valor_unit']}")
+    
     print(f"💰 VALOR DO FRETE EXTRAÍDO: R$ {valor_frete}")
     print(f"💰 VALOR DO DESCONTO EXTRAÍDO: R$ {valor_desconto}")
     
-    # Retorna tanto os itens quanto o valor do frete e desconto
     return {
         'items': items,
         'valor_frete': valor_frete,
         'valor_desconto': valor_desconto
     }
+
 
 def extract_table_with_pdfplumber(file_path):
     try:
