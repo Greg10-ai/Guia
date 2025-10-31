@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Index - Calculadora DIFAL 3i</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --3i-blue: #0055a4;
+            --3i-light-blue: #0078c1;
+            --3i-orange: #ff6b00;
+            --3i-dark-blue: #003b7c;
+            --3i-gradient: linear-gradient(135deg, var(--3i-blue) 0%, var(--3i-light-blue) 100%);
+        }
+        
+        body {
+            background: var(--3i-gradient);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .login-container {
+            max-width: 420px;
+            width: 100%;
+            animation: fadeInUp 0.8s ease-out;
+        }
+        
+        .login-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 85, 164, 0.3);
+            border: none;
+            overflow: hidden;
+        }
+        
+        .logo-section {
+            background: var(--3i-gradient);
+            padding: 30px 20px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .logo-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            animation: float 20s infinite linear;
+        }
+        
+        .logo {
+            width: 120px;
+            height: 120px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            position: relative;
+            z-index: 2;
+        }
+        
+        .logo-text {
+            font-size: 2.5rem;
+            font-weight: 900;
+            background: var(--3i-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .brand-name {
+            color: white;
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .brand-subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1rem;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .login-form {
+            padding: 40px 30px 30px;
+        }
+        
+        .form-control {
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 15px 20px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+        
+        .form-control:focus {
+            border-color: var(--3i-light-blue);
+            box-shadow: 0 0 0 3px rgba(0, 120, 193, 0.1);
+            background: white;
+            transform: translateY(-2px);
+        }
+        
+        .input-group-text {
+            background: var(--3i-gradient);
+            border: none;
+            color: white;
+            border-radius: 12px 0 0 12px;
+            padding: 15px 20px;
+        }
+        
+        .btn-login {
+            background: var(--3i-gradient);
+            border: none;
+            border-radius: 12px;
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 120, 193, 0.4);
+        }
+        
+        .btn-login:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 120, 193, 0.6);
+        }
+        
+        .btn-login:active {
+            transform: translateY(-1px);
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
+        .feature-item {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            transition: transform 0.3s ease;
+        }
+        
+        .feature-item:hover {
+            transform: translateY(-2px);
+        }
+        
+        .feature-icon {
+            font-size: 1.5rem;
+            color: var(--3i-blue);
+            margin-bottom: 8px;
+        }
+        
+        .feature-text {
+            font-size: 0.85rem;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .credentials {
+            background: linear-gradient(45deg, #f8f9fa, #e9ecef);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 25px;
+            border-left: 4px solid var(--3i-orange);
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes float {
+            from {
+                transform: translate(0, 0) rotate(0deg);
+            }
+            to {
+                transform: translate(20px, 20px) rotate(360deg);
+            }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(0, 120, 193, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(0, 120, 193, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 120, 193, 0);
+            }
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <!-- Header com Logo -->
+            <div class="logo-section">
+                <div class="logo pulse">
+                    <div class="logo-text">3i</div>
+                </div>
+                <h1 class="brand-name">3i INOVAÇÃO</h1>
+                <p class="brand-subtitle">Calculadora DIFAL Inteligente</p>
+            </div>
+            
+            <!-- Formulário de Login -->
+            <div class="login-form">
+                <p class="brand-subtitle">Bora meu nobre</p>
+                <!-- Mensagens flash -->
+                      <div class="alert alert-{{ 'danger' if category == 'danger' else 'success' }} alert-dismissible fade show" role="alert">
+                        <i class="fas fa-{{ 'exclamation-triangle' if category == 'danger' else 'check-circle' }} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                      </div>
+
+                <form action="{{ url_for('login') }}" method="POST">
+                    <div class="mb-4">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-user"></i>
+                            </span>
+                            <input type="text" class="form-control" id="username" 
+                                   name="username" placeholder="Digite seu usuário" required autofocus>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-lock"></i>
+                            </span>
+                            <input type="password" class="form-control" id="password" 
+                                   name="password" placeholder="Digite sua senha" required>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-login">
+                            <i class="fas fa-sign-in-alt me-2"></i>ACESSAR SISTEMA
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Features -->
+                <div class="features">
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <i class="fas fa-bolt"></i>
+                        </div>
+                        <div class="feature-text">Cálculo Rápido</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <div class="feature-text">Seguro</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <i class="fas fa-file-pdf"></i>
+                        </div>
+                        <div class="feature-text">Leitura de PDF</div>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="feature-text">Relatórios</div>
+                    </div>
+                </div>
+
+                <!-- Credenciais de Teste -->
+                <div class="credentials">
+                    <h6 class="text-center mb-3" style="color: var(--3i-dark-blue);">
+                        <i class="fas fa-key me-2"></i>Credenciais de Teste
+                    </h6>
+                    <div class="row text-center small">
+                        <div class="col-12 mb-2">
+                            <span class="badge bg-primary me-2">admin</span>
+                            <span class="text-muted">admin123</span>
+                        </div>
+                        <div class="col-12 mb-2">
+                            <span class="badge bg-primary me-2">helen</span>
+                            <span class="text-muted">helen2025</span>
+                        </div>
+                        <div class="col-12">
+                            <span class="badge bg-primary me-2">user</span>
+                            <span class="text-muted">user123</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p>
+                <i class="fas fa-copyright me-1"></i> 2024 3i INOVAÇÃO - Calculadora DIFAL v2.0<br>
+                <small>Sistema otimizado para cálculo tributário inteligente</small>
+            </p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Efeitos interativos
+        const inputs = document.querySelectorAll('.form-control');
+        inputs.forEach(input => {
+            input.addEventListener('focus', function() {
+                this.parentElement.classList.add('focused');
+            });
+            
+            input.addEventListener('blur', function() {
+                this.parentElement.classList.remove('focused');
+            });
+        });
+        
+        // Prevenir envio duplo
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(e) {
+            const submitButton = this.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>ACESSANDO...';
+            
+            // Adicionar delay para visualização do loading
+            setTimeout(() => {
+                submitButton.disabled = false;
+                submitButton.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>ACESSAR SISTEMA';
+            }, 3000);
+        });
+        
+        // Efeito de digitação no placeholder
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        
+        const typeEffect = (element, text, speed) => {
+            let i = 0;
+            element.placeholder = '';
+            
+            function typing() {
+                if (i < text.length) {
+                    element.placeholder += text.charAt(i);
+                    i++;
+                    setTimeout(typing, speed);
+                }
+            }
+            typing();
+        };
+        
+        // Iniciar efeito de digitação após 1 segundo
+        setTimeout(() => {
+            typeEffect(usernameInput, 'Digite seu usuário...', 100);
+        }, 1000);
+        
+        setTimeout(() => {
+            typeEffect(passwordInput, 'Digite sua senha...', 100);
+        }, 2000);
+    });
+    </script>
+</body>
+</html>

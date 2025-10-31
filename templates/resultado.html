@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Resultado DIFAL</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <style>
+        .summary-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+        }
+        .breakdown-card {
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+        }
+        .table th {
+            background-color: #343a40;
+            color: white;
+        }
+        .valor-destaque {
+            font-weight: bold;
+            color: #198754;
+        }
+        .badge-origem {
+            font-size: 0.75em;
+        }
+        .detalhes-adicionais {
+            font-size: 0.8em;
+            color: #6c757d;
+        }
+        .frete-destaque {
+            background-color: #fff3cd !important;
+            border-left: 3px solid #ffc107;
+        }
+        .desconto-destaque {
+            background-color: #d4edda !important;
+            border-left: 3px solid #28a745;
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            .card {
+                border: none !important;
+                box-shadow: none !important;
+            }
+            .table th {
+                background-color: #000 !important;
+                color: white !important;
+            }
+        }
+        @media (max-width: 768px) {
+            .table-responsive {
+                font-size: 0.8rem;
+            }
+            .btn {
+                margin-bottom: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-light">
+<div class="container mt-4">
+
+    <div class="card shadow p-3">
+        <h2 class="text-center mb-3">📊 <b>Resultado do Cálculo DIFAL</b></h2>
+
+        <!-- Resumo Geral -->
+        <div class="row mb-4">
+            <div class="col-md-6 mb-3">
+                <div class="card summary-card p-3 h-100">
+                    <h5>📋 Informações Gerais</h5>
+                    <div class="row mt-3">
+                        <div class="col-6">
+                            <strong>UF de Destino:</strong><br>
+                            <span class="fs-5 badge bg-light text-dark p-2">{{ destino_uf }}</span>
+                        </div>
+                        <div class="col-6">
+                            <strong>Alíquota Interna:</strong><br>
+                            <span class="fs-5 badge bg-light text-dark p-2">{{ "%.2f"|format(aliquota_interna) }}%</span>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <strong>Modo de Cálculo:</strong><br>
+                        {% if is_uso_consumo %}
+                        <span class="badge bg-warning text-dark p-2">Uso e Consumo (com IPI)</span>
+                        {% else %}
+                        <span class="badge bg-info text-white p-2">Normal (sem IPI)</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="card breakdown-card p-3 h-100">
+                    <h5 class="mb-3">💰 Resumo Financeiro</h5>
+                    <table class="table table-sm table-borderless mb-0">
+                        <tr>
+                            <td><strong>Total Produtos:</strong></td>
+                            <td class="text-end">R$ {{ "%.2f"|format(items|sum(attribute='valor_total_produto')) }}</td>
+                        </tr>
+                        {% if valor_frete and valor_frete > 0 %}
+                        <tr class="frete-destaque">
+                            <td><strong>+ Frete:</strong></td>
+                            <td class="text-end"><strong>R$ {{ "%.2f"|format(valor_frete) }}</strong></td>
+                        </tr>
+                        {% endif %}
+                        {% if valor_seguro and valor_seguro > 0 %}
+                        <tr>
+                            <td><strong>+ Seguro:</strong></td>
+                            <td class="text-end">R$ {{ "%.2f"|format(valor_seguro) }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if valor_outros and valor_outros > 0 %}
+                        <tr>
+                            <td><strong>+ Outros:</strong></td>
+                            <td class="text-end">R$ {{ "%.2f"|format(valor_outros) }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if valor_desconto and valor_desconto > 0 %}
+                        <tr class="desconto-destaque">
+                            <td><strong>- Desconto:</strong></td>
+                            <td class="text-end"><strong>R$ {{ "%.2f"|format(valor_desconto) }}</strong></td>
+                        </tr>
+                        {% endif %}
+                        <tr class="border-top">
+                            <td><strong>Base de Cálculo Total:</strong></td>
+                            <td class="text-end"><strong>R$ {{ "%.2f"|format(total_base_calculo) }}</strong></td>
+                        </tr>
+                        <tr class="table-success">
+                            <td><strong>Total DIFAL:</strong></td>
+                            <td class="text-end fs-5 valor-destaque"><strong>R$ {{ "%.2f"|format(total_difal) }}</strong></td>
+                        </tr>
+                    </table>
+                    
+                    <!-- Destaque do cálculo incluindo frete e desconto -->
+                    <div class="mt-3 p-2 bg-warning bg-opacity-10 rounded">
+                        <small class="text-muted">
+                            <strong>💡 Base de cálculo inclui:</strong><br>
+                            Produtos (R$ {{ "%.2f"|format(items|sum(attribute='valor_total_produto')) }})
+                            {% if valor_frete and valor_frete > 0 %}
+                            + Frete (R$ {{ "%.2f"|format(valor_frete) }})
+                            {% endif %}
+                            {% if valor_seguro and valor_seguro > 0 %}
+                            + Seguro (R$ {{ "%.2f"|format(valor_seguro) }})
+                            {% endif %}
+                            {% if valor_outros and valor_outros > 0 %}
+                            + Outros (R$ {{ "%.2f"|format(valor_outros) }})
+                            {% endif %}
+                            {% if valor_desconto and valor_desconto > 0 %}
+                            - Desconto (R$ {{ "%.2f"|format(valor_desconto) }})
+                            {% endif %}
+                            = R$ {{ "%.2f"|format(total_base_calculo) }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if items %}
+        <!-- Tabela Detalhada -->
+        <div class="table-responsive mb-3">
+            <table class="table table-bordered table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>Código</th>
+                        <th>Descrição</th>
+                        <th>Origem</th>
+                        <th>Valor Unit.</th>
+                        <th>Qtd</th>
+                        <th>Valor Total</th>
+                        <th>Base Cálculo</th>
+                        <th>% DIFAL</th>
+                        <th>Valor DIFAL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td class="fw-bold">{{ loop.index }}</td>
+                        <td><code>{{ item.codigo }}</code></td>
+                        <td>
+                            <small>{{ item.descricao[:50] }}{% if item.descricao|length > 50 %}...{% endif %}</small>
+                        </td>
+                        <td>
+                            <span class="badge {% if item.origem == 'importado' %}bg-danger{% else %}bg-primary{% endif %} badge-origem">
+                                {{ item.origem|upper }}
+                            </span>
+                        </td>
+                        <td>
+                            R$ {{ "%.2f"|format(item.valor_unit) }}
+                            {% if item.valor_unit_c_ipi and is_uso_consumo %}
+                            <br>
+                            <small class="detalhes-adicionais">c/IPI: R$ {{ "%.2f"|format(item.valor_unit_c_ipi) }}</small>
+                            {% endif %}
+                        </td>
+                        <td>{{ item.qtd }}</td>
+                        <td>R$ {{ "%.2f"|format(item.valor_total_produto) }}</td>
+                        <td>
+                            <strong>R$ {{ "%.2f"|format(item.base_calculo) }}</strong>
+                            {% if item.frete_proporcional > 0 or item.seguro_proporcional > 0 or item.outros_proporcional > 0 or item.desconto_proporcional > 0 %}
+                            <br>
+                            <small class="detalhes-adicionais">
+                                {% if item.frete_proporcional > 0 %}
+                                <strong>F:</strong> R$ {{ "%.2f"|format(item.frete_proporcional) }}
+                                {% endif %}
+                                {% if item.seguro_proporcional > 0 %}
+                                <strong>S:</strong> R$ {{ "%.2f"|format(item.seguro_proporcional) }}
+                                {% endif %}
+                                {% if item.outros_proporcional > 0 %}
+                                <strong>O:</strong> R$ {{ "%.2f"|format(item.outros_proporcional) }}
+                                {% endif %}
+                                {% if item.desconto_proporcional > 0 %}
+                                <strong class="text-success">D:</strong> R$ {{ "%.2f"|format(item.desconto_proporcional) }}
+                                {% endif %}
+                            </small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge {% if item.difal_pct > 0 %}bg-success{% else %}bg-secondary{% endif %}">
+                                {{ "%.2f"|format(item.difal_pct) }}%
+                            </span>
+                        </td>
+                        <td class="valor-destaque"><strong>R$ {{ "%.2f"|format(item.valor_difal_total) }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-secondary fw-bold">
+                    <tr>
+                        <td colspan="6" class="text-end">Totais:</td>
+                        <td>R$ {{ "%.2f"|format(items|sum(attribute='valor_total_produto')) }}</td>
+                        <td>R$ {{ "%.2f"|format(total_base_calculo) }}</td>
+                        <td></td>
+                        <td class="valor-destaque">R$ {{ "%.2f"|format(total_difal) }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Legenda e Informações Adicionais -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="alert alert-info">
+                    <h6 class="alert-heading">📝 Legenda</h6>
+                    <small class="mb-0">
+                        <strong>F:</strong> Frete Proporcional | 
+                        <strong>S:</strong> Seguro Proporcional | 
+                        <strong>O:</strong> Outros Proporcional |
+                        <strong class="text-success">D:</strong> Desconto Proporcional<br>
+                        <strong>Origem:</strong> 
+                        <span class="badge bg-primary badge-origem">NACIONAL</span> 
+                        <span class="badge bg-danger badge-origem">IMPORTADO</span>
+                    </small>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="alert alert-light">
+                    <h6 class="alert-heading">ℹ️ Informações</h6>
+                    <small class="mb-0">
+                        <strong>Data do Cálculo:</strong> {{ now.strftime('%d/%m/%Y %H:%M') if now else '' }}<br>
+                        <strong>Itens Processados:</strong> {{ items|length }} produto(s)<br>
+                        {% if valor_frete and valor_frete > 0 %}
+                        <strong>Frete Total:</strong> R$ {{ "%.2f"|format(valor_frete) }}<br>
+                        {% endif %}
+                        {% if valor_seguro and valor_seguro > 0 %}
+                        <strong>Seguro Total:</strong> R$ {{ "%.2f"|format(valor_seguro) }}<br>
+                        {% endif %}
+                        {% if valor_outros and valor_outros > 0 %}
+                        <strong>Outros Total:</strong> R$ {{ "%.2f"|format(valor_outros) }}<br>
+                        {% endif %}
+                        {% if valor_desconto and valor_desconto > 0 %}
+                        <strong>Desconto Total:</strong> R$ {{ "%.2f"|format(valor_desconto) }}
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        {% else %}
+        <div class="alert alert-warning text-center">
+            <h5>⚠️ Nenhum item para calcular</h5>
+            <p class="mb-0">Não foram encontrados itens para processar o cálculo do DIFAL.</p>
+        </div>
+        {% endif %}
+
+        <!-- Botões de Ação -->
+        <div class="mt-4 text-center no-print">
+            <div class="btn-group" role="group">
+                <a href="{{ url_for('site') }}" class="btn btn-primary">⬅ Voltar para Calculadora</a>
+                <button onclick="window.print()" class="btn btn-secondary">🖨️ Imprimir Resultado</button>
+                <button onclick="window.history.back()" class="btn btn-outline-secondary">↩️ Voltar</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
