@@ -154,13 +154,15 @@ def load_product_base(file_path):
     print(f"📊 Base carregada com {len(PRODUCT_DB)} produtos")
     return True
 
-def calc_difal(valor_total_produtos, valor_frete, valor_seguro, valor_outros, valor_desconto, origem, aliquota_interna_pct):
+def calc_difal(valor_total_produtos, valor_frete, valor_seguro, valor_outros, valor_desconto, origem, aliquota_interna_pct, destino_uf):
     """
-    Calcula DIFAL conforme a origem do produto:
+    Calcula DIFAL conforme a origem do produto E estado de destino:
     - IMPORTADO: DIFAL = 4%
-    - NACIONAL: DIFAL = Alíquota Interna - 12%
+    - NACIONAL: 
+        * MG, RJ, RS, SC, PR, SP: DIFAL = Alíquota Interna - 12%
+        * Demais estados: DIFAL = Alíquota Interna - 7%
     
-    Agora inclui frete, seguro, outros e desconto no cálculo da base de cálculo
+    Inclui frete, seguro, outros e desconto no cálculo da base de cálculo
     """
     # Converte para Decimal
     aliquota_interna = Decimal(str(aliquota_interna_pct))
@@ -169,8 +171,17 @@ def calc_difal(valor_total_produtos, valor_frete, valor_seguro, valor_outros, va
         # Para importado: DIFAL fixo em 4%
         difal_pct = Decimal("4.00")
     else:
-        # Para nacional: DIFAL = Alíquota Interna - 12%
-        difal_pct = aliquota_interna - Decimal("12.00")
+        # Para nacional: DIFAL varia conforme o estado de destino
+        estados_12pct = ["MG", "RJ", "RS", "SC", "PR", "SP"]
+        
+        if destino_uf in estados_12pct:
+            # Estados com redução de 12%
+            difal_pct = aliquota_interna - Decimal("12.00")
+        else:
+            # Demais estados com redução de 7%
+            difal_pct = aliquota_interna - Decimal("7.00")
+        
+        # Garante que o DIFAL não seja negativo
         if difal_pct < 0:
             difal_pct = Decimal("0.00")
     
@@ -839,7 +850,8 @@ def compute():
             outros_proporcional,
             desconto_proporcional,
             origem, 
-            aliquota_interna
+            aliquota_interna,
+            destino_uf #
         )
         
         # Atualiza o item com os valores calculados
