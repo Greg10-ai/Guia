@@ -10,6 +10,7 @@
 
     <div class="card shadow p-4">
         <h2 class="text-center mb-3">📊 <b>Calculadora DIFAL</b></h2>
+        
 
         <!-- Mensagens flash -->
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -39,6 +40,10 @@
                 Remover Base de Produtos
             </button>
         </form>
+        <script>trou</script>
+
+        <div class="card shadow p-4">
+        <h2 class="text-center mb-3"> 📄<b>Começa aqui Bruxo/a</b></h2>
 
         <!-- Upload de PDF/Imagem para preencher produtos -->
         <form action="{{ url_for('upload_pdf') }}" method="POST" enctype="multipart/form-data" class="mb-4">
