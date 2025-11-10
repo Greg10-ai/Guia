@@ -11,125 +11,190 @@
     <div class="card shadow p-4">
         <h2 class="text-center mb-3">📊 <b>Calculadora DIFAL</b></h2>
 
-        <!-- Mensagens flash -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-              </div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
+                <!-- Botão para ocultar/mostrar -->
+        <button type="button" class="btn btn-outline-secondary btn-sm mb-3" onclick="toggleUploadSection()">
+            📊 Ocultar Base de Produtos
+        </button>
 
-        <!-- Upload da base -->
-        <form action="{{ url_for('upload_base') }}" method="POST" enctype="multipart/form-data" class="mb-3">
-            <div class="input-group">
-                <input type="file" class="form-control" name="file" required>
-                <button type="submit" class="btn btn-primary">Carregar Base</button>
-            </div>
-        </form>
-
-        {% if produtos %}
-        <!-- Remover base -->
-        <form action="{{ url_for('remove_base') }}" method="POST" class="mb-4">
-            <button type="submit" class="btn btn-danger"
-                onclick="return confirm('Tem certeza que deseja remover a base atual?');">
-                Remover Base de Produtos
-            </button>
-        </form>
-
-        <!-- Upload de PDF/Imagem para preencher produtos -->
-        <form action="{{ url_for('upload_pdf') }}" method="POST" enctype="multipart/form-data" class="mb-4">
-            <label class="form-label">📄 Enviar PDF/Imagem da Cotação:</label>
-            <div class="input-group">
-                <input type="file" class="form-control" name="pdf_file" accept=".pdf,.jpg,.jpeg,.png" required>
-                <button type="submit" class="btn btn-secondary">Preencher Produtos</button>
-            </div>
-        </form>
-
-        <!-- Formulário de cálculo DIFAL -->
-        <form action="{{ url_for('compute') }}" method="POST">
-            <div class="mb-3">
-                <label class="form-label">UF de Destino:</label>
-                <select name="destino_uf" class="form-select" required>
-                    {% for uf in ufs %}
-                        <option value="{{ uf }}">{{ uf }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <!-- Seção de Custos Adicionais -->
-            <div class="card mb-4">
-                <div class="card-header bg-info text-white">
-                    <h6 class="mb-0">💰 Custos Adicionais</h6>
+        <!-- DIV container para agrupar tudo que queremos ocultar -->
+        <div id="baseProdutosSection">
+            <!-- Mensagens flash -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <label class="form-label">Frete (R$)</label>
-                            <input type="number" step="0.01" name="valor_frete" class="form-control" 
-                                   placeholder="0,00" value="{{ valor_frete_encontrado if valor_frete_encontrado else '0.00' }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Seguro (R$)</label>
-                            <input type="number" step="0.01" name="valor_seguro" class="form-control" 
-                                   placeholder="0,00" value="0.00">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Outros (R$)</label>
-                            <input type="number" step="0.01" name="valor_outros" class="form-control" 
-                                   placeholder="0,00" value="0.00">
-                        </div>
+                {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <!-- Upload da base -->
+            <form action="{{ url_for('upload_base') }}" method="POST" enctype="multipart/form-data" class="mb-3">
+                <div class="input-group">
+                    <input type="file" class="form-control" name="file" required>
+                    <button type="submit" class="btn btn-primary">Carregar Base</button>
+                </div>
+            </form>
+
+            {% if produtos %}
+            <!-- Remover base -->
+            <form action="{{ url_for('remove_base') }}" method="POST" class="mb-4">
+                <button type="submit" class="btn btn-danger"
+                    onclick="return confirm('Tem certeza que deseja remover a base atual?');">
+                    Remover Base de Produtos
+                </button>
+            </form>
+            {% endif %}
+        </div>
+
+        <script>
+        function toggleUploadSection() {
+            const section = document.getElementById('baseProdutosSection');
+            const button = document.querySelector('button[onclick="toggleUploadSection()"]');
+            
+            if (section.style.display === 'none') {
+                section.style.display = 'block';
+                button.textContent = '📊 Ocultar Base de Produtos';
+            } else {
+                section.style.display = 'none';
+                button.textContent = '📊 Mostrar Base de Produtos';
+            }
+        }
+
+        // Inicialmente visível
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('baseProdutosSection').style.display = 'block';
+        });
+</script>
+        
+        <div class="card shadow p-4">
+            <h2 class="text-center mb-3">📄<b>Começa aqui Bruxo/a</b></h2>
+
+            <!-- Upload de PDF/Imagem para preencher produtos -->
+            <form action="{{ url_for('upload_pdf') }}" method="POST" enctype="multipart/form-data" class="mb-4">
+                <label class="form-label">📄 Enviar PDF/Imagem da Cotação:</label>
+                <div class="input-group">
+                    <input type="file" class="form-control" name="pdf_file" accept=".pdf,.jpg,.jpeg,.png" required>
+                    <button type="submit" class="btn btn-secondary">Preencher Produtos</button>
+                </div>
+            </form>
+
+            <!-- Formulário de cálculo DIFAL -->
+            <form action="{{ url_for('compute') }}" method="POST">
+                <div class="mb-3">
+                    <label class="form-label">UF de Destino:</label>
+                    <select name="destino_uf" class="form-select" required>
+                        {% for uf in ufs %}
+                            <option value="{{ uf }}">{{ uf }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Seção de Custos Adicionais -->
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h6 class="mb-0">💰 Custos Adicionais</h6>
                     </div>
-                    <small class="text-muted mt-2 d-block">
-                        💡 Estes valores serão incluídos na base de cálculo do DIFAL e distribuídos proporcionalmente entre os produtos.
-                    </small>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label class="form-label">Frete (R$)</label>
+                                <input type="number" step="0.01" name="valor_frete" class="form-control" 
+                                       placeholder="0,00" value="{{ valor_frete_encontrado if valor_frete_encontrado else '0.00' }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Seguro (R$)</label>
+                                <input type="number" step="0.01" name="valor_seguro" class="form-control" 
+                                       placeholder="0,00" value="0.00">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Outros (R$)</label>
+                                <input type="number" step="0.01" name="valor_outros" class="form-control" 
+                                       placeholder="0,00" value="0.00">
+                            </div>
+                        </div>
+                        <small class="text-muted mt-2 d-block">
+                            💡 Estes valores serão incluídos na base de cálculo do DIFAL e distribuídos proporcionalmente entre os produtos.
+                        </small>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Checkbox Uso e Consumo -->
-            <div class="form-check mb-3">
-                <input type="checkbox" name="uso-consumo" class="form-check-input" id="uso-consumo" 
-                       onchange="toggleValorFields(this.checked)">
-                <label for="uso-consumo" class="form-check-label">Considerar uso e consumo (calcular com Preço c/ IPI)</label>
-            </div>
-
-            <!-- Seção de Produtos -->
-            <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h6 class="mb-0">📦 Produtos</h6>
+                <!-- Checkbox Uso e Consumo -->
+                <div class="form-check mb-3">
+                    <input type="checkbox" name="uso-consumo" class="form-check-input" id="uso-consumo" 
+                           onchange="toggleValorFields(this.checked)">
+                    <label for="uso-consumo" class="form-check-label">Considerar uso e consumo (calcular com Preço c/ IPI)</label>
                 </div>
-                <div class="card-body">
-                    <div id="produtos-container">
-                        {% if produtos_extraidos %}
-                            {% for p in produtos_extraidos %}
+
+                <!-- Seção de Produtos -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0">📦 Produtos</h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="produtos-container">
+                            {% if produtos_extraidos %}
+                                {% for p in produtos_extraidos %}
+                                <div class="row mb-2 produto-row">
+                                    <div class="col-md-2">
+                                        <label class="form-label small">Código</label>
+                                        <input type="text" name="codigo[]" class="form-control" value="{{ p.codigo }}" required>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small">Preço s/ IPI</label>
+                                        <input type="number" step="0.01" name="valor_unit[]" class="form-control valor-field" 
+                                               value="{{ p.valor_unit }}" data-valor-unit="{{ p.valor_unit }}" 
+                                               data-valor-unit-c-ipi="{{ p.valor_unit_c_ipi }}" required>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small">Preço c/ IPI</label>
+                                        <input type="number" step="0.01" name="preco_unit_c_ipi[]" class="form-control valor-c-ipi-field" 
+                                               value="{{ p.valor_unit_c_ipi }}" required>
+                                    </div>
+                                    <div class="col-md-1">
+                                        <label class="form-label small">Quantidade</label>
+                                        <input type="number" step="1" name="qtd[]" class="form-control" value="{{ p.qtd }}" required>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small">%ICMS Doc</label>
+                                        <div class="input-group">
+                                            <input type="hidden" name="icms_pct[]" value="{{ p.icms_pct }}">
+                                            <input type="text" class="form-control bg-light" value="{{ p.icms_pct }}%" readonly>
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-1 d-flex align-items-end">
+                                        <button type="button" class="btn btn-success btn-add">+</button>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
                             <div class="row mb-2 produto-row">
                                 <div class="col-md-2">
                                     <label class="form-label small">Código</label>
-                                    <input type="text" name="codigo[]" class="form-control" value="{{ p.codigo }}" required>
+                                    <input type="text" name="codigo[]" class="form-control" placeholder="Código" required>
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label small">Preço s/ IPI</label>
                                     <input type="number" step="0.01" name="valor_unit[]" class="form-control valor-field" 
-                                           value="{{ p.valor_unit }}" data-valor-unit="{{ p.valor_unit }}" 
-                                           data-valor-unit-c-ipi="{{ p.valor_unit_c_ipi }}" required>
+                                           placeholder="0,00" data-valor-unit="" data-valor-unit-c-ipi="" required>
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label small">Preço c/ IPI</label>
                                     <input type="number" step="0.01" name="preco_unit_c_ipi[]" class="form-control valor-c-ipi-field" 
-                                           value="{{ p.valor_unit_c_ipi }}" required>
+                                           placeholder="0,00" required>
                                 </div>
                                 <div class="col-md-1">
                                     <label class="form-label small">Quantidade</label>
-                                    <input type="number" step="1" name="qtd[]" class="form-control" value="{{ p.qtd }}" required>
+                                    <input type="number" step="1" name="qtd[]" class="form-control" placeholder="Qtd" required>
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label small">%ICMS Doc</label>
                                     <div class="input-group">
-                                        <input type="hidden" name="icms_pct[]" value="{{ p.icms_pct }}">
-                                        <input type="text" class="form-control bg-light" value="{{ p.icms_pct }}%" readonly>
+                                        <input type="hidden" name="icms_pct[]" value="0.0">
+                                        <input type="text" class="form-control bg-light" value="0.0%" readonly>
                                         <span class="input-group-text">%</span>
                                     </div>
                                 </div>
@@ -137,63 +202,25 @@
                                     <button type="button" class="btn btn-success btn-add">+</button>
                                 </div>
                             </div>
-                            {% endfor %}
-                        {% else %}
-                        <div class="row mb-2 produto-row">
-                            <div class="col-md-2">
-                                <label class="form-label small">Código</label>
-                                <input type="text" name="codigo[]" class="form-control" placeholder="Código" required>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label small">Preço s/ IPI</label>
-                                <input type="number" step="0.01" name="valor_unit[]" class="form-control valor-field" 
-                                       placeholder="0,00" data-valor-unit="" data-valor-unit-c-ipi="" required>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label small">Preço c/ IPI</label>
-                                <input type="number" step="0.01" name="preco_unit_c_ipi[]" class="form-control valor-c-ipi-field" 
-                                       placeholder="0,00" required>
-                            </div>
-                            <div class="col-md-1">
-                                <label class="form-label small">Quantidade</label>
-                                <input type="number" step="1" name="qtd[]" class="form-control" placeholder="Qtd" required>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label small">%ICMS Doc</label>
-                                <div class="input-group">
-                                    <input type="hidden" name="icms_pct[]" value="0.0">
-                                    <input type="text" class="form-control bg-light" value="0.0%" readonly>
-                                    <span class="input-group-text">%</span>
-                                </div>
-                            </div>
-                            <div class="col-md-1 d-flex align-items-end">
-                                <button type="button" class="btn btn-success btn-add">+</button>
-                            </div>
+                            {% endif %}
                         </div>
-                        {% endif %}
                     </div>
                 </div>
-            </div>
 
-            <div class="alert alert-info mt-3">
-                <small>
-                    <strong>💡 Informação:</strong> 
-                    <span id="modo-info">Quando "Uso e consumo" estiver marcado, o cálculo será feito usando o Preço c/ IPI.</span>
-                    <br>
-                    <strong>💰 Custos Adicionais:</strong> Frete, seguro e outros valores serão incluídos na base de cálculo do DIFAL.
-                    <br>
-                    <strong>📋 Nova Funcionalidade:</strong> O %ICMS é extraído automaticamente do PDF e usado no cálculo do DIFAL.
-                </small>
-            </div>
+                <div class="alert alert-info mt-3">
+                    <small>
+                        <strong>💡 Informação:</strong> 
+                        <span id="modo-info">Quando "Uso e consumo" estiver marcado, o cálculo será feito usando o Preço c/ IPI.</span>
+                        <br>
+                        <strong>💰 Custos Adicionais:</strong> Frete, seguro e outros valores serão incluídos na base de cálculo do DIFAL.
+                        <br>
+                        <strong>📋 Nova Funcionalidade:</strong> O %ICMS é extraído automaticamente do PDF e usado no cálculo do DIFAL.
+                    </small>
+                </div>
 
-            <button type="submit" class="btn btn-success mt-3">Calcular DIFAL</button>
-        </form>
-
-        {% else %}
-        <div class="alert alert-warning text-center">
-            ⚠ Nenhum produto carregado na base! Faça upload de uma planilha para começar.
+                <button type="submit" class="btn btn-success mt-3">Calcular DIFAL</button>
+            </form>
         </div>
-        {% endif %}
     </div>
 </div>
 
