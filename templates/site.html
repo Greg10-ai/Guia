@@ -11,7 +11,7 @@
     <div class="card shadow p-4">
         <h2 class="text-center mb-3">📊 <b>Calculadora DIFAL</b></h2>
 
-                <!-- Botão para ocultar/mostrar -->
+        <!-- Botão para ocultar/mostrar -->
         <button type="button" class="btn btn-outline-secondary btn-sm mb-3" onclick="toggleUploadSection()">
             📊 Ocultar Base de Produtos
         </button>
@@ -48,26 +48,6 @@
             </form>
             {% endif %}
         </div>
-
-        <script>
-        function toggleUploadSection() {
-            const section = document.getElementById('baseProdutosSection');
-            const button = document.querySelector('button[onclick="toggleUploadSection()"]');
-            
-            if (section.style.display === 'none') {
-                section.style.display = 'block';
-                button.textContent = '📊 Ocultar Base de Produtos';
-            } else {
-                section.style.display = 'none';
-                button.textContent = '📊 Mostrar Base de Produtos';
-            }
-        }
-
-        // Inicialmente visível
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('baseProdutosSection').style.display = 'block';
-        });
-</script>
         
         <div class="card shadow p-4">
             <h2 class="text-center mb-3">📄<b>Começa aqui Bruxo/a</b></h2>
@@ -227,6 +207,20 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
+// Função para ocultar/mostrar a seção de base de produtos
+function toggleUploadSection() {
+    const section = document.getElementById('baseProdutosSection');
+    const button = document.querySelector('button[onclick="toggleUploadSection()"]');
+    
+    if (section.style.display === 'none') {
+        section.style.display = 'block';
+        button.textContent = '📊 Ocultar Base de Produtos';
+    } else {
+        section.style.display = 'none';
+        button.textContent = '📊 Mostrar Base de Produtos';
+    }
+}
+
 // Função para alternar entre os campos de valor baseado no checkbox
 function toggleValorFields(usoConsumo) {
     const valorFields = document.querySelectorAll('.valor-field');
