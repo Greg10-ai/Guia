@@ -169,7 +169,7 @@ def calc_difal(valor_total_produtos, valor_frete, valor_seguro, valor_outros, va
     
     if origem == "importado":
         # Para importado: DIFAL fixo em 4%
-        difal_pct = Decimal("4.00")
+        difal_pct = aliquota_interna - Decimal("4.00")
     else:
         # Para nacional: DIFAL varia conforme o estado de destino
         estados_12pct = ["MG", "RJ", "RS", "SC", "PR", "SP"]
